@@ -2,36 +2,6 @@ import streamlit as st
 import pandas as pd
 import re
 
-# Add custom CSS for styling
-st.markdown(
-    """
-    <style>
-    body {
-        background-color: #f0f8ff; /* Light background */
-        font-family: 'Arial', sans-serif; /* Font style */
-    }
-    .stApp {
-        color: #003B5C; /* Dark blue text */
-    }
-    .stButton, .stDownloadButton {
-        background-color: #D6A600; /* Gold button */
-        color: white;
-        border: none;
-    }
-    .stButton:hover, .stDownloadButton:hover {
-        background-color: #A4C8E1; /* Light blue on hover */
-    }
-    .stHeader {
-        color: #003B5C; /* Dark blue headers */
-    }
-    .stTextInput, .stFileUploader {
-        border: 2px solid #003B5C; /* Dark blue border for inputs */
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
 # Define the mapping for legal entity abbreviations
 abbreviation_map = {
     r'\bnv\b|n\.v\.|nv\.': 'N.V.',
@@ -75,6 +45,15 @@ def check_profit_center(df):
     else:
         return None
 
+# Function to check base unit of measure
+def check_base_unit_of_measure(df):
+    if 'Base Unit of Measure' in df.columns:
+        # Example check: replace 'ExpectedUnit' with the actual expected unit
+        df['Base Unit Check'] = df['Base Unit of Measure'].apply(lambda x: 'Correct' if x == 'ExpectedUnit' else 'Incorrect')
+        return df[['Base Unit of Measure', 'Base Unit Check']]
+    else:
+        return None
+
 st.title("Data Quality Tool")
 
 # Create tabs for different functionalities
@@ -82,15 +61,28 @@ tab1, tab2 = st.tabs(["Material Master Data", "Business Partner Master Data"])
 
 # Material Master Data Tab
 with tab1:
-    st.header("Profit Center Check")
-    uploaded_file_pc = st.file_uploader("Upload your Excel file for profit center check", type=["xlsx"])
+    st.header("Material Master Data Checks")
+    
+    # Option to select the type of check
+    check_type = st.selectbox("Select the check type:", ["Profit Center Check", "Base Unit of Measure Check"])
+    
+    uploaded_file_pc = st.file_uploader("Upload your Excel file for material master data", type=["xlsx"])
     if uploaded_file_pc:
         df_pc = pd.read_excel(uploaded_file_pc)
-        result = check_profit_center(df_pc)
-        if result is not None:
-            st.write("Profit Center Check Results:", result)
-        else:
-            st.error("Column 'Profit Center' not found in your file.")
+        
+        if check_type == "Profit Center Check":
+            result = check_profit_center(df_pc)
+            if result is not None:
+                st.write("Profit Center Check Results:", result)
+            else:
+                st.error("Column 'Profit Center' not found in your file.")
+        
+        elif check_type == "Base Unit of Measure Check":
+            result = check_base_unit_of_measure(df_pc)
+            if result is not None:
+                st.write("Base Unit of Measure Check Results:", result)
+            else:
+                st.error("Column 'Base Unit of Measure' not found in your file.")
 
 # Business Partner Master Data Tab
 with tab2:
