@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import re
 
-# Add funny animation background
+# Add beer pouring animation using HTML and CSS
 st.markdown(
     """
     <style>
@@ -10,47 +10,73 @@ st.markdown(
         background-color: #f0f8ff;
         overflow: hidden;
     }
-    .circle {
+    .container {
+        position: relative;
+        width: 200px;
+        height: 300px;
+        margin: auto;
+    }
+    .bottle {
         position: absolute;
-        border-radius: 50%;
-        animation: bounce 4s infinite;
+        width: 40px;
+        height: 120px;
+        background-color: #8B4513; /* Brown color for the bottle */
+        border-radius: 10px;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        animation: pour 3s infinite;
     }
-    @keyframes bounce {
-        0%, 100% {
-            transform: translateY(0);
-        }
-        50% {
-            transform: translateY(-100px);
-        }
+    .bottle:before {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 0;
+        border-left: 20px solid transparent;
+        border-right: 20px solid transparent;
+        border-bottom: 20px solid #8B4513; /* Bottle cap */
+        top: -20px;
+        left: 0;
     }
-    .circle1 {
-        width: 100px;
-        height: 100px;
-        background-color: rgba(255, 0, 0, 0.5);
-        top: 20%;
-        left: 10%;
-        animation-delay: 0s;
-    }
-    .circle2 {
-        width: 150px;
-        height: 150px;
-        background-color: rgba(0, 255, 0, 0.5);
-        top: 50%;
-        left: 30%;
-        animation-delay: 1s;
-    }
-    .circle3 {
+    .glass {
+        position: absolute;
         width: 80px;
-        height: 80px;
-        background-color: rgba(0, 0, 255, 0.5);
-        top: 70%;
-        left: 70%;
-        animation-delay: 2s;
+        height: 100px;
+        background-color: #fff;
+        border: 5px solid #000;
+        border-radius: 10px;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    .beer {
+        position: absolute;
+        width: 80px;
+        height: 0;
+        background-color: #FFD700; /* Beer color */
+        border-radius: 10px;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        animation: fill 3s infinite;
+    }
+    @keyframes pour {
+        0% { transform: translateX(-50%) rotate(0deg); }
+        50% { transform: translateX(-50%) rotate(-30deg); }
+        100% { transform: translateX(-50%) rotate(0deg); }
+    }
+    @keyframes fill {
+        0% { height: 0; }
+        50% { height: 80px; }
+        100% { height: 0; }
     }
     </style>
-    <div class="circle circle1"></div>
-    <div class="circle circle2"></div>
-    <div class="circle circle3"></div>
+    <div class="container">
+        <div class="bottle"></div>
+        <div class="glass">
+            <div class="beer"></div>
+        </div>
+    </div>
     """,
     unsafe_allow_html=True
 )
