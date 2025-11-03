@@ -26,7 +26,7 @@ def standardise_name(name):
                 return replacement
         return word.capitalize()
 
-    name = re.sub(r'\s+', ' ', name).strip()
+    name = re.sub(r'\s+', ' ', str(name)).strip()
     for pattern, replacement in abbreviation_map.items():
         name = re.sub(pattern, replacement, name, flags=re.IGNORECASE)
     
@@ -38,19 +38,23 @@ def standardise_name(name):
     return name
 
 # Function to check profit center
-def check_profit_center(df):
+def check_profit_center(df, expected_value):
     if 'Profit Center' in df.columns:
-        df['Profit Center Check'] = df['Profit Center'].apply(lambda x: 'Correct' if x == 'ExpectedValue' else 'Incorrect')
-        return df[['Profit Center', 'Profit Center Check']]
+        # coerce to string to avoid dtype issues
+        df['Profit Center Check'] = df['Profit Center'].astype(str).apply(
+            lambda x: 'Correct' if x == str(expected_value) else 'Incorrect'
+        )
+        return df[['Profit Center', 'Profit Center Check', *[c for c in df.columns if c not in ['Profit Center', 'Profit Center Check']]]]
     else:
         return None
 
 # Function to check base unit of measure
-def check_base_unit_of_measure(df):
+def check_base_unit_of_measure(df, expected_unit):
     if 'Base Unit of Measure' in df.columns:
-        # Example check: replace 'ExpectedUnit' with the actual expected unit
-        df['Base Unit Check'] = df['Base Unit of Measure'].apply(lambda x: 'Correct' if x == 'ExpectedUnit' else 'Incorrect')
-        return df[['Base Unit of Measure', 'Base Unit Check']]
+        df['Base Unit Check'] = df['Base Unit of Measure'].astype(str).apply(
+            lambda x: 'Correct' if x == str(expected_unit) else 'Incorrect'
+        )
+        return df[['Base Unit of Measure', 'Base Unit Check', *[c for c in df.columns if c not in ['Base Unit of Measure', 'Base Unit Check']]]]
     else:
         return None
 
@@ -69,20 +73,37 @@ with tab1:
     uploaded_file_pc = st.file_uploader("Upload your Excel file for material master data", type=["xlsx"])
     if uploaded_file_pc:
         df_pc = pd.read_excel(uploaded_file_pc)
+        total_rows = len(df_pc)
+        st.info(f"Total observations in uploaded file: {total_rows}")
         
         if check_type == "Profit Center Check":
-            result = check_profit_center(df_pc)
-            if result is not None:
-                st.write("Profit Center Check Results:", result)
-            else:
-                st.error("Column 'Profit Center' not found in your file.")
+            expected_value = st.text_input("Expected Profit Center value", value="ExpectedValue")
+            if st.button("Run Profit Center Check"):
+                result = check_profit_center(df_pc.copy(), expected_value)
+                if result is not None:
+                    # compute counts
+                    correct_count = (df_pc['Profit Center'].astype(str) == str(expected_value)).sum()
+                    incorrect_count = total_rows - correct_count
+                    st.write("Profit Center Check Results (preview):")
+                    st.dataframe(result.head(50))
+                    st.success(f"Correct: {correct_count} / {total_rows}")
+                    st.warning(f"To change (Incorrect): {incorrect_count} / {total_rows}")
+                else:
+                    st.error("Column 'Profit Center' not found in your file.")
         
         elif check_type == "Base Unit of Measure Check":
-            result = check_base_unit_of_measure(df_pc)
-            if result is not None:
-                st.write("Base Unit of Measure Check Results:", result)
-            else:
-                st.error("Column 'Base Unit of Measure' not found in your file.")
+            expected_unit = st.text_input("Expected Base Unit of Measure", value="ExpectedUnit")
+            if st.button("Run Base Unit of Measure Check"):
+                result = check_base_unit_of_measure(df_pc.copy(), expected_unit)
+                if result is not None:
+                    correct_count = (df_pc['Base Unit of Measure'].astype(str) == str(expected_unit)).sum()
+                    incorrect_count = total_rows - correct_count
+                    st.write("Base Unit of Measure Check Results (preview):")
+                    st.dataframe(result.head(50))
+                    st.success(f"Correct: {correct_count} / {total_rows}")
+                    st.warning(f"To change (Incorrect): {incorrect_count} / {total_rows}")
+                else:
+                    st.error("Column 'Base Unit of Measure' not found in your file.")
 
 # Business Partner Master Data Tab
 with tab2:
@@ -90,9 +111,16 @@ with tab2:
     uploaded_file_bp = st.file_uploader("Upload your Excel file for standardisation", type=["xlsx"])
     if uploaded_file_bp:
         df_bp = pd.read_excel(uploaded_file_bp)
+        total_rows_bp = len(df_bp)
+        st.info(f"Total observations in uploaded file: {total_rows_bp}")
         if 'Name' in df_bp.columns:
             df_bp['Name_Standardised'] = df_bp['Name'].astype(str).apply(standardise_name)
-            st.write("Preview of standardised names:", df_bp[['Name', 'Name_Standardised']].head())
+            changed_mask = df_bp['Name'].astype(str) != df_bp['Name_Standardised']
+            changed_count = changed_mask.sum()
+            st.write("Preview of standardised names:")
+            st.dataframe(df_bp[['Name', 'Name_Standardised']].head(50))
+            st.success(f"Unchanged: {total_rows_bp - changed_count} / {total_rows_bp}")
+            st.warning(f"To change (different after standardisation): {changed_count} / {total_rows_bp}")
             
             output_file = "BP_Names_Standardised.xlsx"
             with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
