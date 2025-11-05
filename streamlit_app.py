@@ -2,9 +2,6 @@ import streamlit as st
 import pandas as pd
 import re
 
-# Import the batch indicator function
-from Batch_indicator_check import update_batch_indicator
-
 # Define the mapping for legal entity abbreviations
 abbreviation_map = {
     r'\bnv\b|n\.v\.|nv\.': 'N.V.',
@@ -48,6 +45,15 @@ def check_profit_center(df):
     else:
         return None
 
+# Function to check base unit of measure
+def check_base_unit_of_measure(df):
+    if 'Base Unit of Measure' in df.columns:
+        # Example check: replace 'ExpectedUnit' with the actual expected unit
+        df['Base Unit Check'] = df['Base Unit of Measure'].apply(lambda x: 'Correct' if x == 'ExpectedUnit' else 'Incorrect')
+        return df[['Base Unit of Measure', 'Base Unit Check']]
+    else:
+        return None
+
 st.title("Data Quality Tool")
 
 # Create tabs for different functionalities
@@ -55,24 +61,49 @@ tab1, tab2 = st.tabs(["Material Master Data", "Business Partner Master Data"])
 
 # Material Master Data Tab
 with tab1:
-    st.header("Profit Center Check and Batch Indicator Check")
+    st.header("Material Master Data Checks")
     
-    # Profit Center Check
-    uploaded_file_pc = st.file_uploader("Upload your Excel file for profit center check", type=["xlsx"], key="pc_uploader")
+    # Option to select the type of check
+    check_type = st.selectbox("Select the check type:", ["Profit Center Check", "Base Unit of Measure Check"])
+    
+    uploaded_file_pc = st.file_uploader("Upload your Excel file for material master data", type=["xlsx"])
     if uploaded_file_pc:
         df_pc = pd.read_excel(uploaded_file_pc)
-        result = check_profit_center(df_pc)
-        if result is not None:
-            st.write("Profit Center Check Results:", result)
-        else:
-            st.error("Column 'Profit Center' not found in your file.")
-
-    # Batch Indicator Check
-    uploaded_file_batch = st.file_uploader("Upload your Excel file for batch indicator check", type=["xlsx"], key="batch_uploader")
-    if uploaded_file_batch:
-        df_batch = pd.read_excel(uploaded_file_batch)
-        report = update_batch_indicator(df_batch)
         
-        if not report.empty:
-            st.write("Batch Indicator Check Results:", report)
-            output_file
+        if check_type == "Profit Center Check":
+            result = check_profit_center(df_pc)
+            if result is not None:
+                st.write("Profit Center Check Results:", result)
+            else:
+                st.error("Column 'Profit Center' not found in your file.")
+        
+        elif check_type == "Base Unit of Measure Check":
+            result = check_base_unit_of_measure(df_pc)
+            if result is not None:
+                st.write("Base Unit of Measure Check Results:", result)
+            else:
+                st.error("Column 'Base Unit of Measure' not found in your file.")
+
+# Business Partner Master Data Tab
+with tab2:
+    st.header("BP Name Standardisation")
+    uploaded_file_bp = st.file_uploader("Upload your Excel file for standardisation", type=["xlsx"])
+    if uploaded_file_bp:
+        df_bp = pd.read_excel(uploaded_file_bp)
+        if 'Name' in df_bp.columns:
+            df_bp['Name_Standardised'] = df_bp['Name'].astype(str).apply(standardise_name)
+            st.write("Preview of standardised names:", df_bp[['Name', 'Name_Standardised']].head())
+            
+            output_file = "BP_Names_Standardised.xlsx"
+            with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+                df_bp.to_excel(writer, index=False)
+            
+            with open(output_file, "rb") as f:
+                st.download_button(
+                    label="Download Standardised Excel",
+                    data=f,
+                    file_name=output_file,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+        else:
+            st.error("Column 'Name' not found in your file.")
