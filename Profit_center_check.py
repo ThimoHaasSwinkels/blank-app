@@ -63,6 +63,11 @@ def check_profit_centers(df):
     profit_center_col = 'Profit Center' if 'Profit Center' in df.columns else 'PRCTR'
     plant_col = 'Plant' if 'Plant' in df.columns else 'WERKS'
     material_number_col = 'Material Number' if 'Material Number' in df.columns else 'MATNR'
+    lvorm_col = 'LVORM' if 'LVORM' in df.columns else None
+
+    # Filter out rows where LVORM is 'X'
+    if lvorm_col and lvorm_col in df.columns:
+        df = df[df[lvorm_col] != 'X']
     
     if profit_center_col in df.columns and plant_col in df.columns and material_number_col in df.columns:
         # Initialize a list to store results
@@ -84,3 +89,4 @@ def check_profit_centers(df):
         return results_df
     else:
         raise ValueError("Required columns not found in the DataFrame.")
+
