@@ -44,8 +44,11 @@ def standardise_name(name):
 # Function to check profit center
 def check_profit_center(df):
     if 'Profit Center' in df.columns:
+        # Example logic for checking profit centers
         df['Profit Center Check'] = df['Profit Center'].apply(lambda x: 'Correct' if x == 'ExpectedValue' else 'Incorrect')
-        return df[['Profit Center', 'Profit Center Check']]
+        # Filter to show only incorrect results
+        incorrect_results = df[df['Profit Center Check'] == 'Incorrect']
+        return incorrect_results[['Profit Center', 'Profit Center Check']]
     else:
         return None
 
