@@ -65,15 +65,23 @@ with tab1:
     if check_type == "Profit Center Check":
         uploaded_file_pc = st.file_uploader("Upload your Excel file for profit center check", type=["xlsx"])
         if uploaded_file_pc:
-            try:
-                result_df = check_profit_centers(uploaded_file_pc)  # Call the correct function
-                if not result_df.empty:
-                    st.write("Incorrect Profit Center Check Results:")
-                    st.dataframe(result_df)  # Display the results in a dataframe
-                else:
-                    st.success("All profit centers are correct.")
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
+            df_pc = pd.read_excel(uploaded_file_pc)
+            result = check_profit_centers(df_pc)  # Call the actual function
+            if result is not None:
+                st.write("Profit Center Check Results:", result)
+                
+                # Create a download button for the results
+                output_file = "Profit_Center_Check_Results.xlsx"
+                result.to_excel(output_file, index=False)
+                with open(output_file, "rb") as f:
+                    st.download_button(
+                        label="Download Profit Center Check Results",
+                        data=f,
+                        file_name=output_file,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+            else:
+                st.error("Column 'Profit Center' not found in your file.")
 
     # Batch Indicator Check
     elif check_type == "Batch Indicator Check":
