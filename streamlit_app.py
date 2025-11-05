@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 import re
 
+# Import the batch indicator function
+from Batch_indicator_check import update_batch_indicator
+
 # Define the mapping for legal entity abbreviations
 abbreviation_map = {
     r'\bnv\b|n\.v\.|nv\.': 'N.V.',
@@ -45,15 +48,6 @@ def check_profit_center(df):
     else:
         return None
 
-# Function to check base unit of measure
-def check_base_unit_of_measure(df):
-    if 'Base Unit of Measure' in df.columns:
-        # Example check: replace 'ExpectedUnit' with the actual expected unit
-        df['Base Unit Check'] = df['Base Unit of Measure'].apply(lambda x: 'Correct' if x == 'ExpectedUnit' else 'Incorrect')
-        return df[['Base Unit of Measure', 'Base Unit Check']]
-    else:
-        return None
-
 st.title("Data Quality Tool")
 
 # Create tabs for different functionalities
@@ -63,26 +57,48 @@ tab1, tab2 = st.tabs(["Material Master Data", "Business Partner Master Data"])
 with tab1:
     st.header("Material Master Data Checks")
     
-    # Option to select the type of check
-    check_type = st.selectbox("Select the check type:", ["Profit Center Check", "Base Unit of Measure Check"])
+    # Dropdown menu for selecting the type of check
+    check_type = st.selectbox("Select the check to perform:", ["Profit Center Check", "Batch Indicator Check", "Base Unit of Measure Check"])
     
-    uploaded_file_pc = st.file_uploader("Upload your Excel file for material master data", type=["xlsx"])
-    if uploaded_file_pc:
-        df_pc = pd.read_excel(uploaded_file_pc)
-        
-        if check_type == "Profit Center Check":
+    # Profit Center Check
+    if check_type == "Profit Center Check":
+        uploaded_file_pc = st.file_uploader("Upload your Excel file for profit center check", type=["xlsx"])
+        if uploaded_file_pc:
+            df_pc = pd.read_excel(uploaded_file_pc)
             result = check_profit_center(df_pc)
             if result is not None:
                 st.write("Profit Center Check Results:", result)
             else:
                 st.error("Column 'Profit Center' not found in your file.")
-        
-        elif check_type == "Base Unit of Measure Check":
-            result = check_base_unit_of_measure(df_pc)
-            if result is not None:
-                st.write("Base Unit of Measure Check Results:", result)
+
+    # Batch Indicator Check
+    elif check_type == "Batch Indicator Check":
+        uploaded_file_batch = st.file_uploader("Upload your Excel file for batch indicator check", type=["xlsx"])
+        if uploaded_file_batch:
+            df_batch = pd.read_excel(uploaded_file_batch)
+            report = update_batch_indicator(df_batch)
+            
+            if not report.empty:
+                st.write("Batch Indicator Check Results:", report)
+                output_file = "Batch_Indicator_Report.xlsx"
+                report.to_excel(output_file, index=False)
+                with open(output_file, "rb") as f:
+                    st.download_button(
+                        label="Download Batch Indicator Report",
+                        data=f,
+                        file_name=output_file,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
             else:
-                st.error("Column 'Base Unit of Measure' not found in your file.")
+                st.error("No data found matching the criteria.")
+
+    # Base Unit of Measure Check (Placeholder for future implementation)
+    elif check_type == "Base Unit of Measure Check":
+        uploaded_file_bum = st.file_uploader("Upload your Excel file for base unit of measure check", type=["xlsx"])
+        if uploaded_file_bum:
+            df_bum = pd.read_excel(uploaded_file_bum)
+            # Implement your base unit of measure check logic here
+            st.write("Base Unit of Measure Check is not yet implemented.")
 
 # Business Partner Master Data Tab
 with tab2:
