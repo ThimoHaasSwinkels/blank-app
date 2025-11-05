@@ -4,8 +4,8 @@ def update_batch_indicator(df):
     # Filter out deleted materials
     df_active = df[df['LVORM'] != 'X']
 
-    # Filter for material type 'Hawa'
-    df_hawa = df_active[df_active['MATKL'] == 1603]
+    # Filter for material type 'Hawa' (assuming 1604 is correct)
+    df_hawa = df_active[df_active['MATKL'] == 1604]
 
     # Segmentation Level 3 values to include
     segmentation_levels = [
@@ -38,16 +38,4 @@ def update_batch_indicator(df):
         df_not_selected['Update'] = 'Not Selected'
         report = pd.concat([report, df_not_selected[['MATNR', 'MATKL', 'ZZ1_SEGMENTL3_PRD', 'XCHPF', 'Update']]])
 
-    # Output report: List of updated materials
     return report
-
-# Usage:
-df = pd.read_excel(r'C:\Users\ThimoHa\OneDrive - Swinkels\Documents\Code\projects\etl-python\03. Naming convention BPs\mara-batch indicator.xlsx')
-report = update_batch_indicator(df)
-
-# Check if the report is empty before saving
-if not report.empty:
-    report.to_excel('batch_indicator_update_report.xlsx', index=False)
-    print("Report saved successfully.")
-else:
-    print("No data to save in the report.")
