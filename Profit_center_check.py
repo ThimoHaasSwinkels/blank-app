@@ -58,30 +58,22 @@ profit_center_mapping = {
     1507: 'PC031'
 }
 
-def check_profit_centers(file_path):
-    # Read the Excel file
-    df = pd.read_excel(file_path)
-
-    # Determine the correct column names
+def check_profit_centers(df):
+    # Check if required columns are present
     profit_center_col = 'Profit Center' if 'Profit Center' in df.columns else 'PRCTR'
     plant_col = 'Plant' if 'Plant' in df.columns else 'WERKS'
     material_number_col = 'Material Number' if 'Material Number' in df.columns else 'MATNR'
-    lvorm_col = 'LVORM' if 'LVORM' in df.columns else None
-
-    # Filter out rows where LVORM is 'X'
-    if lvorm_col and lvorm_col in df.columns:
-        df = df[df[lvorm_col] != 'X']
-
+    
     if profit_center_col in df.columns and plant_col in df.columns and material_number_col in df.columns:
         # Initialize a list to store results
         results = []
-
+        
         for index, row in df.iterrows():
             plant_code = row[plant_col]
             provided_profit_center = row[profit_center_col]
             material_number = row[material_number_col]
             expected_profit_center = profit_center_mapping.get(plant_code, 'PC016')  # Default to 'PC016' for other plants
-
+            
             if provided_profit_center == expected_profit_center:
                 results.append({'Material Number': material_number, 'Plant': plant_code, 'Profit Center': provided_profit_center, 'Check': 'Correct'})
             else:
@@ -89,22 +81,6 @@ def check_profit_centers(file_path):
 
         # Convert results to DataFrame
         results_df = pd.DataFrame(results)
-
-        # Filter to include only incorrect results
-        incorrect_results_df = results_df[results_df['Check'] == 'Incorrect']
-        return incorrect_results_df
+        return results_df
     else:
-        raise ValueError("Columns 'Profit Center' (or 'PRCTR'), 'Plant' (or 'WERKS'), and 'Material Number' (or 'MATNR') not found in the provided file.")
-
-if __name__ == "__main__":
-    # Example usage
-    file_path = input("Enter the path to the Excel file for profit center check: ")
-    try:
-        result_df = check_profit_centers(file_path)
-        if not result_df.empty:
-            print("Incorrect Profit Center Check Results:")
-            print(result_df)
-        else:
-            print("All profit centers are correct.")
-    except Exception as e:
-        print(f"An error occurred: {e}")
+        raise ValueError("Required columns not found in the DataFrame.")
