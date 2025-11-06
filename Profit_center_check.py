@@ -64,10 +64,15 @@ def check_profit_centers(df):
     plant_col = 'Plant' if 'Plant' in df.columns else 'WERKS'
     material_number_col = 'Material Number' if 'Material Number' in df.columns else 'MATNR'
     lvorm_col = 'LVORM' if 'LVORM' in df.columns else None
+    mtart_col = 'MTART' if 'MTART' in df.columns else None
 
     # Filter out rows where LVORM is 'X'
     if lvorm_col and lvorm_col in df.columns:
         df = df[df[lvorm_col] != 'X']
+
+    # Filter out rows where MTART is 'NLAG' or 'DIEN'
+    if mtart_col and mtart_col in df.columns:
+        df = df[~df[mtart_col].isin(['NLAG', 'DIEN'])]
     
     if profit_center_col in df.columns and plant_col in df.columns and material_number_col in df.columns:
         # Initialize a list to store results
@@ -78,7 +83,7 @@ def check_profit_centers(df):
             provided_profit_center = row[profit_center_col]
             material_number = row[material_number_col]
             expected_profit_center = profit_center_mapping.get(plant_code, 'PC016')  # Default to 'PC016' for other plants
-            
+
             if provided_profit_center == expected_profit_center:
                 results.append({'Material Number': material_number, 'Plant': plant_code, 'Profit Center': provided_profit_center, 'Check': 'Correct'})
             else:
@@ -86,7 +91,44 @@ def check_profit_centers(df):
 
         # Convert results to DataFrame
         results_df = pd.DataFrame(results)
-        return results_df
+
+        # Filter to include only incorrect results
+        incorrect_results_df = results_df[results_df['Check'] == 'Incorrect']
+        return incorrect_results_df
     else:
-        raise ValueError("Required columns not found in the DataFrame.")
+        raise ValueError("Columns 'Profit Center' (or 'PRCTR'), 'Plant' (or 'WERKS'), and 'Material Number' (or 'MATNR') not found in the provided file.")
+
+       for index, row in df.iterrows():
+            plant_code = row[plant_col]
+            provided_profit_center = row[profit_center_col]
+            material_number = row[material_number_col]
+            expected_profit_center = profit_center_mapping.get(plant_code, 'PC016')  # Default to 'PC016' for other plants
+
+            if provided_profit_center == expected_profit_center:
+                results.append({'Material Number': material_number, 'Plant': plant_code, 'Profit Center': provided_profit_center, 'Check': 'Correct'})
+            else:
+                results.append({'Material Number': material_number, 'Plant': plant_code, 'Profit Center': provided_profit_center, 'Check': 'Incorrect', 'Expected': expected_profit_center})
+
+        # Convert results to DataFrame
+        results_df = pd.DataFrame(results)
+
+        # Filter to include only incorrect results
+        incorrect_results_df = results_df[results_df['Check'] == 'Incorrect']
+        return incorrect_results_df
+    else:
+        raise ValueError("Columns 'Profit Center' (or 'PRCTR'), 'Plant' (or 'WERKS'), and 'Material Number' (or 'MATNR') not found in the provided file.")
+
+    if __name__ == "__main__":
+        # Example usage
+        file_path = input("Enter the path to the Excel file for profit center check: ")
+        try:
+            result_df = check_profit_centers(file_path)
+            if not result_df.empty:
+                print("Incorrect Profit Center Check Results:")
+                print(result_df)  # This will only show incorrect results
+            else:
+                print("All profit centers are correct.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
 
