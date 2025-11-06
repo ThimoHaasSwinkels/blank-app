@@ -64,11 +64,17 @@ def check_profit_centers(df):
     plant_col = 'Plant' if 'Plant' in df.columns else 'WERKS'
     material_number_col = 'Material Number' if 'Material Number' in df.columns else 'MATNR'
     lvorm_col = 'LVORM' if 'LVORM' in df.columns else None
+    mtart_col = 'MTART' if 'MTART' in df.columns else None  # New: material type column
 
     # Filter out rows where LVORM is 'X'
     if lvorm_col and lvorm_col in df.columns:
         df = df[df[lvorm_col] != 'X']
-    
+
+    # Filter out rows where MTART is 'NLAG' or 'DIEN' (out of scope)
+    if mtart_col and mtart_col in df.columns:
+        # Guard against non-string values and normalize case before comparison
+        df = df[~df[mtart_col].astype(str).str.upper().isin(['NLAG', 'DIEN'])]
+
     if profit_center_col in df.columns and plant_col in df.columns and material_number_col in df.columns:
         # Initialize a list to store results
         results = []
