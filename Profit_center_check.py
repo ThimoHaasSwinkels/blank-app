@@ -59,38 +59,62 @@ profit_center_mapping = {
 }
 
 def check_profit_centers(df):
-    # Check if required columns are present
+    # Determine column names (support both friendly and SAP names)
     profit_center_col = 'Profit Center' if 'Profit Center' in df.columns else 'PRCTR'
     plant_col = 'Plant' if 'Plant' in df.columns else 'WERKS'
     material_number_col = 'Material Number' if 'Material Number' in df.columns else 'MATNR'
     lvorm_col = 'LVORM' if 'LVORM' in df.columns else None
-    mtart_col = 'MTART' if 'MTART' in df.columns else None  # New: material type column
-
-    # Filter out rows where LVORM is 'X'
-    if lvorm_col and lvorm_col in df.columns:
-        df = df[df[lvorm_col] != 'X']
-
-    # Filter out rows where MTART is 'NLAG' or 'DIEN' (out of scope)
-    if mtart_col and mtart_col in df.columns:
-        # Guard against non-string values and normalize case before comparison
-        df = df[~df[mtart_col].astype(str).str.upper().isin(['NLAG', 'DIEN'])]
+    mtart_col = 'MTART' if 'MTART' in df.columns else None  # material type column
 
     if profit_center_col in df.columns and plant_col in df.columns and material_number_col in df.columns:
-        # Initialize a list to store results
         results = []
-        
+
         for index, row in df.iterrows():
             plant_code = row[plant_col]
             provided_profit_center = row[profit_center_col]
             material_number = row[material_number_col]
             expected_profit_center = profit_center_mapping.get(plant_code, 'PC016')  # Default to 'PC016' for other plants
-            
-            if provided_profit_center == expected_profit_center:
-                results.append({'Material Number': material_number, 'Plant': plant_code, 'Profit Center': provided_profit_center, 'Check': 'Correct'})
-            else:
-                results.append({'Material Number': material_number, 'Plant': plant_code, 'Profit Center': provided_profit_center, 'Check': 'Incorrect', 'Expected': expected_profit_center})
 
-        # Convert results to DataFrame
+            if provided_profit_center == expected_profit_center:
+                # Always include correct rows
+                results.append({
+                    'Material Number': material_number,
+                    'Plant': plant_code,
+                    'Profit Center': provided_profit_center,
+                    'Check': 'Correct'
+                })
+            else:
+                # Row would be incorrect — only filter it out (skip) if it's out of scope:
+                # - LVORM == 'X' (deletion flag)
+                # - MTART in ('NLAG', 'DIEN') (out of scope material types)
+                out_of_scope = False
+
+                if lvorm_col and lvorm_col in df.columns:
+                    try:
+                        if str(row[lvorm_col]).upper() == 'X':
+                            out_of_scope = True
+                    except Exception:
+                        pass
+
+                if not out_of_scope and mtart_col and mtart_col in df.columns:
+                    try:
+                        if str(row[mtart_col]).strip().upper() in {'NLAG', 'DIEN'}:
+                            out_of_scope = True
+                    except Exception:
+                        pass
+
+                if out_of_scope:
+                    # Skip adding this incorrect row (treat as out of scope)
+                    continue
+                else:
+                    results.append({
+                        'Material Number': material_number,
+                        'Plant': plant_code,
+                        'Profit Center': provided_profit_center,
+                        'Check': 'Incorrect',
+                        'Expected': expected_profit_center
+                    })
+
         results_df = pd.DataFrame(results)
         return results_df
     else:
